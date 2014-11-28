@@ -1,0 +1,157 @@
+#!/bin/sh
+#
+#   piles - making sense of your piles of files
+#   by Sean Yeh
+#
+#   A simple script to show the file sizes of your folders and files in a
+#   sorted list.
+#   This is useful to get a sense of which folders/files take up the most space.
+#
+#   Should work in most shells
+#       (bash, zsh, dash, heirloom, or whatever your /bin/sh points to)
+
+get_size(){
+    printf `du -sb --apparent-size "$1" | cut -f1`
+}
+
+sum(){
+    _total=0
+
+    OIFS="$IFS"
+    IFS=" "
+    for x in $@; do
+        _total=`echo $x + $_total | bc`
+    done
+    IFS="$OIFS"
+
+    printf "$_total"
+}
+
+to_human(){
+    _bytes="$1"
+
+    OIFS="$IFS"
+    IFS="|"
+
+    # I'm sorry if you have more than 1000 Petabytes of data.
+    # Either you're Google or from the future.
+    for _label in `printf "B|K|M|G|T|P"`; do
+        _int=`printf "scale=0; $_bytes / 1\n" | bc`
+        if [ $_int -lt 1000 ]; then
+            _result=`printf "scale=1; $_bytes / 1\n" | bc`"$_label"
+
+            # align to 8 spaces
+            printf "        $_result" | tail -c 8
+            return 0
+        fi
+
+        _bytes=`printf "scale=2; $_bytes / 1000 + 0.05\n" | bc -l`
+    done
+    IFS="$OIFS"
+}
+
+to_percent(){
+    _percent="    "`printf "scale=2; 100 * $1 / $2 + 0.05\n" | bc`
+    printf "$_percent" | head -c -1 | tail -c 5
+}
+
+main(){
+    _arg_n="$1"
+    [ -z "$_arg_n" ] && _arg_n=10
+
+    _arg_dir="$2"
+    [ -z "$_arg_dir" ] && _arg_dir="."
+
+
+    # ----------
+    # Find all files
+
+    s=""
+    OIFS="$IFS"
+    IFS='|'
+
+    # Find all files that are not links (ignoring "." and "..")
+    for f in `find "$_arg_dir" -maxdepth 1 \! -type l | tail -n +2 | tr '\n' '|'`; do
+        _size=`get_size "$f"`
+
+        # size $f human_Size
+        s="$_size `to_human $_size` `printf $f`|""$s"
+    done
+
+    _sorted=`printf "$s" | tr '|' '\n' | sort -rn`
+
+    # ----------
+    # Sizes
+
+    _sizes=`printf "$s" | tr '|' '\n' | cut -d' ' -f1 | sort -rn`
+
+    # Total size
+    _total_sizes=`printf "$_sizes" | tr '\n' ' '`
+    _total_sum=`sum $_total_sizes`
+
+    # Displayed items size
+    _display_sizes=`printf "$_sizes" | head -n $_arg_n | tr '\n' ' '`
+    _display_sum=`sum $_display_sizes`
+
+    # Other items size (if num items > _arg_n)
+    _other_sum=`printf "$_total_sum - $_display_sum\n" | bc`
+
+
+    # ----------
+    # Output
+
+    for x in `printf "$_sorted\n" | head -n $_arg_n | tr '\n' '|'`; do
+        _size=`printf "$x" | cut -d' ' -f1`
+
+        printf "`to_percent $_size $_total_sum`%% "
+
+        printf "$x" | cut -d' ' -f2-
+    done
+
+    # Print other
+    if [ "$_other_sum" -gt 0 ]; then
+        printf "`to_percent $_other_sum $_total_sum`%% "
+        printf "`to_human $_other_sum` (other)\n"
+    fi
+
+    # Print total
+    printf "\nTotal:\n`to_human $_total_sum`\n"
+
+    OIFS="$IFS"
+}
+
+arg_n=""
+arg_dir=""
+
+while [ 1 ]; do
+    arg="$1"
+    [ "$1" = "" ] && break;
+
+    case $arg in
+        "-h" | "--help" )
+            printf "piles [DIRECTORY] [OPTIONS]\n\n"
+            printf "Show disk usage of folders/files in DIRECTORY.\n\n"
+            printf "  -n MAX_NUM\tnumber files/folders to show (default: 10)\n"
+            printf "  -h, --help\tdisplay this help.\n"
+            exit 0;;
+        "-n" )
+            if [ "$2" = "" ]; then
+                printf -- "-n requires an argument.\n"
+                exit 1
+            fi
+
+            if [ `printf "%d" "$2" 2>/dev/null` != "$2" ] || [ "$2" -le 0 ]; then
+                printf -- "-n requires an integer > 0\n"
+                exit 1
+            fi
+
+            arg_n="$2"
+            shift;;
+        *)
+            [ -z "$arg_dir" ] && arg_dir="$1";;
+    esac
+
+    shift
+done
+
+main "$arg_n" "$arg_dir"
