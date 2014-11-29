@@ -15,3 +15,7 @@ Run ```piles``` to display the folders/files in the directory, or ```piles DIR``
 The optional ```-n``` flag allows you to change the number of folders/files displayed.
 
 ```piles -n 5``` will display only the top 5 folders/files.
+
+
+### License
+Do whatever you want with it!

@@ -3,12 +3,14 @@
 #   piles - making sense of your piles of files
 #   by Sean Yeh
 #
-#   A simple script to show the file sizes of your folders and files in a
+#   A shell script to show the file sizes of your folders and files in a
 #   sorted list.
 #   This is useful to get a sense of which folders/files take up the most space.
 #
 #   Should work in most shells
 #       (bash, zsh, dash, heirloom, or whatever your /bin/sh points to)
+#
+#   License: Do whatever you want with it!
 
 get_size(){
     printf `du -sb --apparent-size "$1" | cut -f1`
