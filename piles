@@ -17,14 +17,15 @@ get_size(){
 sum(){
     _total=0
 
-    OIFS="$IFS"
+    _sum_OIFS="$IFS"
     IFS=" "
-    for x in $@; do
-        _total=`echo $x + $_total | bc`
-    done
-    IFS="$OIFS"
 
-    printf "$_total"
+    for x in `printf "$@"`; do
+        _total=`printf "$x + $_total\n" | bc`
+    done
+    IFS="$_sum_OIFS"
+
+    printf "%s" "$_total"
 }
 
 to_human(){
@@ -37,12 +38,12 @@ to_human(){
     # Either you're Google or from the future.
     for _label in `printf "B|K|M|G|T|P"`; do
         _int=`printf "scale=0; $_bytes / 1\n" | bc`
-        if [ $_int -lt 1000 ]; then
+        if [ "$_int" -lt 1000 ]; then
             _result=`printf "scale=1; $_bytes / 1\n" | bc`"$_label"
 
             # align to 8 spaces
             printf "        $_result" | tail -c 8
-            return 0
+            break
         fi
 
         _bytes=`printf "scale=2; $_bytes / 1000 + 0.05\n" | bc -l`
@@ -72,13 +73,16 @@ main(){
 
     # Find all files that are not links (ignoring "." and "..")
     for f in `find "$_arg_dir" -maxdepth 1 \! -type l | tail -n +2 | tr '\n' '|'`; do
+        [ -z "$f" ] && continue # some shells have an extra ""
+
         _size=`get_size "$f"`
 
         # size $f human_Size
-        s="$_size `to_human $_size` `printf $f`|""$s"
+        s="$_size `to_human $_size` `printf "%s" "$f"`|""$s"
     done
 
     _sorted=`printf "$s" | tr '|' '\n' | sort -rn`
+
 
     # ----------
     # Sizes
@@ -100,12 +104,14 @@ main(){
     # ----------
     # Output
 
-    for x in `printf "$_sorted\n" | head -n $_arg_n | tr '\n' '|'`; do
-        _size=`printf "$x" | cut -d' ' -f1`
+    for x in `printf "%s\n" "$_sorted" | head -n $_arg_n | tr '\n' '|'`; do
+        [ -z "$x" ] && continue # some shells have an extra ""
+
+        _size=`printf "%s" "$x" | cut -d' ' -f1`
 
         printf "`to_percent $_size $_total_sum`%% "
 
-        printf "$x" | cut -d' ' -f2-
+        printf "%s" "$x" | cut -d' ' -f2-
     done
 
     # Print other
@@ -117,13 +123,13 @@ main(){
     # Print total
     printf "\nTotal:\n`to_human $_total_sum`\n"
 
-    OIFS="$IFS"
+    IFS="$OIFS"
 }
 
 arg_n=""
 arg_dir=""
 
-while [ 1 ]; do
+while true; do
     arg="$1"
     [ "$1" = "" ] && break;
 
