@@ -62,6 +62,14 @@ main(){
     _arg_n="$1"
     [ -z "$_arg_n" ] && _arg_n=10
 
+    _printf_head() {
+        if [ "$_arg_n" -eq 0 ]; then
+            printf "%s" "$1"
+        else
+            printf "%s" "$1" | head -n "$_arg_n"
+        fi
+    }
+
     _arg_dir="$2"
     [ -z "$_arg_dir" ] && _arg_dir="."
 
@@ -96,7 +104,7 @@ main(){
     _total_sum=`sum $_total_sizes`
 
     # Displayed items size
-    _display_sizes=`printf "$_sizes" | head -n $_arg_n | tr '\n' ' '`
+    _display_sizes=`_printf_head "$_sizes" | tr '\n' ' '`
     _display_sum=`sum $_display_sizes`
 
     # Other items size (if num items > _arg_n)
@@ -106,7 +114,7 @@ main(){
     # ----------
     # Output
 
-    for x in `printf "%s\n" "$_sorted" | head -n $_arg_n | tr '\n' '|'`; do
+    for x in `_printf_head "$_sorted" | tr '\n' '|'`; do
         [ -z "$x" ] && continue # some shells have an extra ""
 
         _size=`printf "%s" "$x" | cut -d' ' -f1`
@@ -148,7 +156,7 @@ while true; do
                 exit 1
             fi
 
-            if [ `printf "%d" "$2" 2>/dev/null` != "$2" ] || [ "$2" -le 0 ]; then
+            if [ `printf "%d" "$2" 2>/dev/null` != "$2" ] || [ "$2" -lt 0 ]; then
                 printf -- "-n requires an integer > 0\n"
                 exit 1
             fi

@@ -16,6 +16,8 @@ The optional ```-n``` flag allows you to change the number of folders/files disp
 
 ```piles -n 5``` will display only the top 5 folders/files.
 
+You can run ```piles -n 0``` to display all the folders/files.
+
 
 ### License
 Do whatever you want with it!
